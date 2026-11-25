@@ -1,0 +1,309 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private pilot profile and logbook configuration isolated to a single authenticated user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the owning pilot (immutable)."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254,
+          "description": "Verified email address of the owning pilot."
+        },
+        "pilotName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Display name or callsign of the pilot."
+        },
+        "baselineJson": {
+          "type": "string",
+          "maxLength": 32000,
+          "description": "Optional serialized brought-forward career baseline summary."
+        },
+        "connectedSheetJson": {
+          "type": "string",
+          "maxLength": 32000,
+          "description": "Optional serialized Google Sheets link metadata (never stores OAuth tokens)."
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "description": "Optional UI theme preference persisted per pilot ('light' or 'dark')."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the workspace was created (immutable)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the workspace profile was last updated."
+        }
+      },
+      "required": ["uid", "email", "pilotName", "createdAt", "updatedAt"]
+    },
+    "Flight": {
+      "title": "Flight",
+      "description": "A single private flight logbook sortie belonging exclusively to one pilot.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the owning pilot (immutable)."
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Document identifier for this flight entry."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Sortie date in ISO YYYY-MM-DD format."
+        },
+        "aircraftType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Aircraft type designation (e.g., A-JET, L-39ZA, K8-E, SMK, DA-40)."
+        },
+        "aircraftMark": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Aircraft mark / tail number (e.g., NAF 455, NAF 357)."
+        },
+        "engineCategory": {
+          "type": "string",
+          "enum": ["SINGLE ENGINE", "JET ENGINE", "MULTI ENGINE", "SIMULATOR"],
+          "description": "Engine or simulator classification."
+        },
+        "instructor": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Instructor or PIC callsign."
+        },
+        "exercise": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Exercise or mission description."
+        },
+        "flightType": {
+          "type": "string",
+          "enum": ["DUAL", "SOLO", "PIC", "SIMULATOR"],
+          "description": "Flight role classification."
+        },
+        "sortie": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Optional sortie number or identifier from the Flights tab."
+        },
+        "departure": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Optional departure airfield code (From)."
+        },
+        "arrival": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Optional arrival airfield code (To)."
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Optional route summary."
+        },
+        "totalMinutes": {
+          "type": "number",
+          "description": "Total flight duration in integer minutes (0..1440)."
+        },
+        "dualMinutes": {
+          "type": "number",
+          "description": "Dual instruction duration in integer minutes (0..1440)."
+        },
+        "soloMinutes": {
+          "type": "number",
+          "description": "Solo / PIC duration in integer minutes (0..1440)."
+        },
+        "nightMinutes": {
+          "type": "number",
+          "description": "Night flight duration in integer minutes (0..1440)."
+        },
+        "instrumentMinutes": {
+          "type": "number",
+          "description": "Instrument flight duration in integer minutes (0..1440)."
+        },
+        "simulatorMinutes": {
+          "type": "number",
+          "description": "Simulator session duration in integer minutes (0..1440)."
+        },
+        "takeoffs": {
+          "type": "number",
+          "description": "Number of take-offs (0..200)."
+        },
+        "landings": {
+          "type": "number",
+          "description": "Number of landings (0..200)."
+        },
+        "approaches": {
+          "type": "number",
+          "description": "Number of instrument approaches (0..100)."
+        },
+        "remarks": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Sortie notes or remarks."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["manual", "google_sheets", "appsheet_csv", "imported_sheet", "photo_scan"],
+          "description": "Origin of this flight entry."
+        },
+        "sheetRowNumber": {
+          "type": "number",
+          "description": "Optional 1-indexed Google Sheet row reference."
+        },
+        "customFieldsJson": {
+          "type": "string",
+          "maxLength": 8000,
+          "description": "Optional serialized extra columns preserved from Google Sheets / AppSheet."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the flight record was created (immutable)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the flight record was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "id",
+        "date",
+        "aircraftType",
+        "aircraftMark",
+        "engineCategory",
+        "instructor",
+        "exercise",
+        "flightType",
+        "totalMinutes",
+        "dualMinutes",
+        "soloMinutes",
+        "nightMinutes",
+        "instrumentMinutes",
+        "simulatorMinutes",
+        "takeoffs",
+        "landings",
+        "approaches",
+        "remarks",
+        "source",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Aircraft": {
+      "title": "Aircraft",
+      "description": "An aircraft type and its tracked airframe marks belonging exclusively to one pilot.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the owning pilot (immutable)."
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Short aircraft type code (e.g., A-JET, L-39ZA, K8-E)."
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Full aircraft model name."
+        },
+        "engineCategory": {
+          "type": "string",
+          "enum": ["SINGLE ENGINE", "JET ENGINE", "MULTI ENGINE", "SIMULATOR"],
+          "description": "Engine or simulator classification."
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Operational role of the aircraft."
+        },
+        "marks": {
+          "type": "array",
+          "description": "Bounded list (max 50) of known airframe marks / tail numbers."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional pilot notes about the aircraft type."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["manual", "google_sheets", "appsheet_csv", "imported_sheet", "photo_scan"],
+          "description": "Origin of this fleet entry."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the aircraft record was created (immutable)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the aircraft record was last updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "type",
+        "fullName",
+        "engineCategory",
+        "role",
+        "marks",
+        "source",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private pilot profile and logbook metadata strictly isolated to userId."
+    },
+    "/users/{userId}/flights/{flightId}": {
+      "schema": { "$ref": "#/entities/Flight" },
+      "description": "Private flight logbook entries strictly isolated to userId."
+    },
+    "/users/{userId}/aircraft/{aircraftId}": {
+      "schema": { "$ref": "#/entities/Aircraft" },
+      "description": "Private aircraft fleet types and marks strictly isolated to userId."
+    }
+  }
+}

@@ -1,0 +1,384 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny catch-all: every unmatched path is forbidden.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Core Identity & Structure Helpers
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isEmailVerified() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function hasValidMasterProfile(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
+    }
+
+    function isValidEngineCategory(val) {
+      return val is string && val in ['SINGLE ENGINE', 'JET ENGINE', 'MULTI ENGINE', 'SIMULATOR'];
+    }
+
+    function isValidFlightRole(val) {
+      return val is string && val in ['DUAL', 'SOLO', 'PIC', 'SIMULATOR'];
+    }
+
+    function isValidSource(val) {
+      return val is string && val in ['manual', 'google_sheets', 'appsheet_csv', 'imported_sheet', 'photo_scan'];
+    }
+
+    function isValidTheme(val) {
+      return val is string && val in ['light', 'dark'];
+    }
+
+    function isOptionalString(data, key, maxLen) {
+      return !(key in data) || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isNonNegNumber(val, maxVal) {
+      return (val is int || val is float) && val >= 0 && val <= maxVal;
+    }
+
+    // =========================================================================
+    // Entity Validation Blueprints (called on BOTH create and update)
+    // =========================================================================
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'pilotName', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'uid',
+          'email',
+          'pilotName',
+          'baselineJson',
+          'connectedSheetJson',
+          'theme',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.uid is string
+        && data.uid == request.auth.uid
+        && data.uid == userId
+        && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.email is string
+        && data.email.size() >= 3 && data.email.size() <= 254
+        && (request.auth.token.email == null || data.email.lower() == request.auth.token.email.lower())
+        && data.pilotName is string
+        && data.pilotName.size() >= 1 && data.pilotName.size() <= 80
+        && isOptionalString(data, 'baselineJson', 32000)
+        && isOptionalString(data, 'connectedSheetJson', 32000)
+        && (!('theme' in data) || isValidTheme(data.theme))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFlight(data, flightId) {
+      return data.keys().hasAll([
+          'ownerId',
+          'id',
+          'date',
+          'aircraftType',
+          'aircraftMark',
+          'engineCategory',
+          'instructor',
+          'exercise',
+          'flightType',
+          'totalMinutes',
+          'dualMinutes',
+          'soloMinutes',
+          'nightMinutes',
+          'instrumentMinutes',
+          'simulatorMinutes',
+          'takeoffs',
+          'landings',
+          'approaches',
+          'remarks',
+          'source',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'id',
+          'date',
+          'aircraftType',
+          'aircraftMark',
+          'engineCategory',
+          'instructor',
+          'exercise',
+          'flightType',
+          'sortie',
+          'departure',
+          'arrival',
+          'route',
+          'totalMinutes',
+          'dualMinutes',
+          'soloMinutes',
+          'nightMinutes',
+          'instrumentMinutes',
+          'simulatorMinutes',
+          'takeoffs',
+          'landings',
+          'approaches',
+          'remarks',
+          'source',
+          'sheetRowNumber',
+          'customFieldsJson',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string
+        && data.ownerId == request.auth.uid
+        && data.ownerId.size() >= 1 && data.ownerId.size() <= 128
+        && data.id is string
+        && data.id == flightId
+        && isValidId(data.id)
+        && data.date is string
+        && data.date.size() == 10
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.aircraftType is string
+        && data.aircraftType.size() >= 1 && data.aircraftType.size() <= 64
+        && data.aircraftMark is string
+        && data.aircraftMark.size() <= 64
+        && isValidEngineCategory(data.engineCategory)
+        && data.instructor is string
+        && data.instructor.size() <= 80
+        && data.exercise is string
+        && data.exercise.size() >= 1 && data.exercise.size() <= 160
+        && isValidFlightRole(data.flightType)
+        && isOptionalString(data, 'sortie', 64)
+        && isOptionalString(data, 'departure', 32)
+        && isOptionalString(data, 'arrival', 32)
+        && isOptionalString(data, 'route', 160)
+        && isNonNegNumber(data.totalMinutes, 1440)
+        && isNonNegNumber(data.dualMinutes, 1440)
+        && isNonNegNumber(data.soloMinutes, 1440)
+        && isNonNegNumber(data.nightMinutes, 1440)
+        && isNonNegNumber(data.instrumentMinutes, 1440)
+        && isNonNegNumber(data.simulatorMinutes, 1440)
+        && isNonNegNumber(data.takeoffs, 200)
+        && isNonNegNumber(data.landings, 200)
+        && isNonNegNumber(data.approaches, 100)
+        && data.remarks is string
+        && data.remarks.size() <= 1000
+        && isValidSource(data.source)
+        && (!('sheetRowNumber' in data) || isNonNegNumber(data.sheetRowNumber, 1000000))
+        && isOptionalString(data, 'customFieldsJson', 8000)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAircraft(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'type',
+          'fullName',
+          'engineCategory',
+          'role',
+          'marks',
+          'source',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'type',
+          'fullName',
+          'engineCategory',
+          'role',
+          'marks',
+          'notes',
+          'source',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string
+        && data.ownerId == request.auth.uid
+        && data.ownerId.size() >= 1 && data.ownerId.size() <= 128
+        && data.type is string
+        && data.type.size() >= 1 && data.type.size() <= 64
+        && data.fullName is string
+        && data.fullName.size() >= 1 && data.fullName.size() <= 120
+        && isValidEngineCategory(data.engineCategory)
+        && data.role is string
+        && data.role.size() <= 120
+        && data.marks is list
+        && data.marks.size() <= 50
+        && (data.marks.size() == 0 || (data.marks[0] is string && data.marks[0].size() >= 1 && data.marks[0].size() <= 64))
+        && isOptionalString(data, 'notes', 500)
+        && isValidSource(data.source)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // Per-User Isolated Collections
+    // =========================================================================
+
+    match /users/{userId} {
+      // Zero user enumeration / PII protection
+      allow list: if false;
+
+      allow get: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && (resource == null || existing().uid == request.auth.uid);
+
+      allow create: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && existing().uid == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'pilotName',
+          'baselineJson',
+          'connectedSheetJson',
+          'theme',
+          'updatedAt'
+        ]);
+
+      allow delete: if false;
+
+      match /flights/{flightId} {
+        allow get: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(flightId)
+          && (resource == null || existing().ownerId == request.auth.uid)
+          && hasValidMasterProfile(userId);
+
+        allow list: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && existing().ownerId == request.auth.uid;
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(flightId)
+          && isValidFlight(incoming(), flightId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasValidMasterProfile(userId);
+
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(flightId)
+          && isValidFlight(incoming(), flightId)
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'date',
+            'aircraftType',
+            'aircraftMark',
+            'engineCategory',
+            'instructor',
+            'exercise',
+            'flightType',
+            'sortie',
+            'departure',
+            'arrival',
+            'route',
+            'totalMinutes',
+            'dualMinutes',
+            'soloMinutes',
+            'nightMinutes',
+            'instrumentMinutes',
+            'simulatorMinutes',
+            'takeoffs',
+            'landings',
+            'approaches',
+            'remarks',
+            'source',
+            'sheetRowNumber',
+            'customFieldsJson',
+            'updatedAt'
+          ])
+          && hasValidMasterProfile(userId);
+
+        allow delete: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(flightId)
+          && existing().ownerId == request.auth.uid
+          && hasValidMasterProfile(userId);
+      }
+
+      match /aircraft/{aircraftId} {
+        allow get: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(aircraftId)
+          && (resource == null || existing().ownerId == request.auth.uid)
+          && hasValidMasterProfile(userId);
+
+        allow list: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && existing().ownerId == request.auth.uid;
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(aircraftId)
+          && isValidAircraft(incoming())
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasValidMasterProfile(userId);
+
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(aircraftId)
+          && isValidAircraft(incoming())
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'type',
+            'fullName',
+            'engineCategory',
+            'role',
+            'marks',
+            'notes',
+            'source',
+            'updatedAt'
+          ])
+          && hasValidMasterProfile(userId);
+
+        allow delete: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(aircraftId)
+          && existing().ownerId == request.auth.uid
+          && hasValidMasterProfile(userId);
+      }
+    }
+  }
+}
