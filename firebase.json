@@ -1,0 +1,39 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "AviaLog",
+        "supportEmail": "ajigamaliel30@gmail.com",
+        "authorizedRedirectUris": [
+          "https://avialog-logbook.firebaseapp.com/__/auth/handler",
+          "https://avialog-logbook.web.app/__/auth/handler",
+          "http://localhost"
+        ]
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json",
+    "edition": "enterprise",
+    "database": "avialog-db",
+    "location": "eur3"
+  },
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
+  }
+}
