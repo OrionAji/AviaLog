@@ -1,12 +1,11 @@
 {
-  "projectId": "gen-lang-client-0565858519",
-  "appId": "1:38818732383:web:1d538f5e9a0e6d490d3eea",
-  "apiKey": "AIzaSyA46JtL2zdv9mW2UkCO3fD6pmUHo4VN8hk",
-  "authDomain": "gen-lang-client-0565858519.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-avialog-65523fb4-5335-4300-b788-431d74772d75",
-  "storageBucket": "gen-lang-client-0565858519.firebasestorage.app",
-  "messagingSenderId": "38818732383",
+  "projectId": "avialog-logbook",
+  "appId": "1:623169225269:web:c3e68ddcbfe781aaf1677c",
+  "apiKey": "AIzaSyDcAL8PMSwMuXhbOF1h4aspOHF5Qo0QYzk",
+  "authDomain": "avialog-logbook.firebaseapp.com",
+  "firestoreDatabaseId": "avialog-db",
+  "storageBucket": "avialog-logbook.firebasestorage.app",
+  "messagingSenderId": "623169225269",
   "measurementId": "",
-  "oAuthClientId": "38818732383-3gjnb1oqsmoe5ej1mca7s9618f155u7q.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

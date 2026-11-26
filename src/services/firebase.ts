@@ -1,13 +1,43 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAI, GoogleAIBackend } from 'firebase/ai';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
 import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const typedConfig = firebaseConfig as typeof firebaseConfig & { firestoreDatabaseId?: string };
+const typedConfig = firebaseConfig as typeof firebaseConfig & {
+  firestoreDatabaseId?: string;
+  recaptchaSiteKey?: string;
+};
 
 export const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const firebaseProjectId = firebaseConfig.projectId;
 export const firestoreDatabaseId = typedConfig.firestoreDatabaseId ?? '(default)';
+
+const recaptchaSiteKey = (
+  import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY ||
+  typedConfig.recaptchaSiteKey ||
+  ''
+).trim();
+
+let appCheckInstance: AppCheck | null = null;
+if (typeof window !== 'undefined' && recaptchaSiteKey) {
+  if (import.meta.env.DEV) {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+      import.meta.env.VITE_APPCHECK_DEBUG_TOKEN || true;
+  }
+  appCheckInstance = initializeAppCheck(firebaseApp, {
+    provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
+
+export const appCheck = appCheckInstance;
+
+export const ai = getAI(firebaseApp, {
+  backend: new GoogleAIBackend(),
+  useLimitedUseAppCheckTokens: true,
+});
 
 export const db = typedConfig.firestoreDatabaseId
   ? getFirestore(firebaseApp, typedConfig.firestoreDatabaseId)
